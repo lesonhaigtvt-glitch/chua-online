@@ -100,7 +100,7 @@ input::placeholder { color: var(--muted); }
   </div>
 
   <div class="actions" id="actions">
-    <button class="btn" id="bWalk" type="button">Đi lại</button>
+    <button class="btn" id="bWalk" type="button">Đi</button>
     <button class="btn" id="bSit" type="button">Ngồi xuống</button>
     <button class="btn" id="bStand" type="button">Đứng lên</button>
     <button class="btn" id="bBow" type="button">Bái lạy</button>
@@ -122,7 +122,7 @@ input::placeholder { color: var(--muted); }
     <p>Chọn một chỗ ngồi, thắp nén hương và cùng mọi người nghe nhạc thiền. Chùa nhận tối đa 30 phật tử.</p>
     <div>
       <label for="nick">Tên hoặc pháp danh của bạn</label>
-      <input type="text" id="nick" maxlength="16" placeholder="Ví dụ: Minh Tâm">
+      <input type="text" id="nick" maxlength="16" placeholder="Ví dụ: Sơn Hải">
       <div id="nameErr" role="alert"></div>
     </div>
     <div>
@@ -759,70 +759,40 @@ input::placeholder { color: var(--muted); }
     say(text); addLog(me.name, text, false);
   });
 
-  /* ---------- nhạc thiền tạo bằng Web Audio ---------- */
-  var au = { ctx: null, master: null, bus: null, on: false, vol: 0.5 };
-  var SCALE = [293.66, 329.63, 392, 440, 493.88, 587.33, 659.25];
-  function impulse(c, dur, decay) {
-    var n = Math.floor(c.sampleRate * dur), b = c.createBuffer(2, n, c.sampleRate);
-    for (var ch = 0; ch < 2; ch++) { var d = b.getChannelData(ch); for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, decay); }
-    return b;
-  }
-  function drone() {
-    var c = au.ctx, lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520;
-    var g = c.createGain(); g.gain.setValueAtTime(0, c.currentTime); g.gain.linearRampToValueAtTime(0.16, c.currentTime + 6);
-    lp.connect(g); g.connect(au.bus);
-    [[73.42, 'sine', 0.9], [110, 'sine', 0.5], [146.83, 'triangle', 0.22], [220, 'sine', 0.12]].forEach(function (d, i) {
-      var o = c.createOscillator(); o.type = d[1]; o.frequency.value = d[0] * (1 + (i % 2 ? 0.0015 : -0.0012));
-      var og = c.createGain(); og.gain.value = d[2]; o.connect(og); og.connect(lp); o.start();
-      var lfo = c.createOscillator(); lfo.frequency.value = 0.05 + i * 0.03; var lg = c.createGain(); lg.gain.value = d[2] * 0.35;
-      lfo.connect(lg); lg.connect(og.gain); lfo.start();
-    });
-  }
-  function note() {
-    var c = au.ctx, t = c.currentTime, f = SCALE[(Math.random() * SCALE.length) | 0];
-    [[1, 0.055], [2, 0.014]].forEach(function (p) {
-      var o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f * p[0];
-      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(p[1], t + 1.4); g.gain.exponentialRampToValueAtTime(0.0008, t + 7);
-      o.connect(g); g.connect(au.bus); o.start(t); o.stop(t + 7.2);
-    });
-  }
-  function bowl(f, vol) {
-    if (!au.ctx || !au.on) return;
-    var c = au.ctx, t = c.currentTime;
-    [[1, 1], [2.71, 0.38], [5.4, 0.14]].forEach(function (p) {
-      var o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f * p[0];
-      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol * p[1], t + 0.015); g.gain.exponentialRampToValueAtTime(0.0005, t + 9 / Math.sqrt(p[0]));
-      o.connect(g); g.connect(au.bus); o.start(t); o.stop(t + 10);
-    });
-  }
-  function loopNote() { setTimeout(function () { if (au.on) note(); loopNote(); }, 2200 + Math.random() * 3800); }
-  function loopBowl() { setTimeout(function () { if (au.on) bowl(Math.random() < 0.5 ? 220 : 196, 0.15); loopBowl(); }, 16000 + Math.random() * 12000); }
-  function setMusic(on) {
-    try {
-      if (on && !au.ctx) {
-        var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-        var c = new AC(); au.ctx = c;
-        au.master = c.createGain(); au.master.gain.value = 0; au.master.connect(c.destination);
-        au.bus = c.createGain(); au.bus.connect(au.master);
-        var conv = c.createConvolver(); conv.buffer = impulse(c, 3.8, 2.6);
-        var wet = c.createGain(); wet.gain.value = 0.7; au.bus.connect(conv); conv.connect(wet); wet.connect(au.master);
-        drone(); loopNote(); loopBowl();
-        setTimeout(function () { if (au.on) { note(); bowl(220, 0.14); } }, 600);
-      }
-      au.on = on;
-      if (au.ctx) {
-        if (on) au.ctx.resume();
-        au.master.gain.setTargetAtTime(on ? au.vol : 0, au.ctx.currentTime, 0.4);
-      }
-    } catch (e) { au.on = false; }
-    $('musicBtn').textContent = 'Nhạc thiền: ' + (au.on ? 'bật' : 'tắt');
-    $('musicBtn').setAttribute('aria-pressed', au.on ? 'true' : 'false');
-  }
-  $('musicBtn').onclick = function () { setMusic(!au.on); };
-  $('vol').addEventListener('input', function (e) {
-    au.vol = e.target.value / 100;
-    if (au.ctx && au.on) au.master.gain.setTargetAtTime(au.vol, au.ctx.currentTime, 0.1);
-  });
+  /* ---------- Nhạc thiền từ file nhac-thien.mp3 ---------- */
+var au = { ctx: null, master: null, bus: null, on: false, vol: 0.5, source: null, buffer: null };
+
+// Hàm tải và giải mã file MP3 từ thư mục bên trái
+function loadAudioFile() {
+    if (!au.ctx) return;
+    
+    fetch('nhac-thien.mp3')
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => au.ctx.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+            au.buffer = audioBuffer;
+            console.log("Đã tải xong file nhac-thien.mp3");
+        })
+        .catch(error => console.error("Lỗi khi tải file nhạc:", error));
+}
+
+// Hàm phát nhạc (thay thế cho drone/note cũ)
+function playMeditationMusic() {
+    if (!au.ctx || !au.buffer) return;
+    
+    // Dừng nhạc cũ nếu đang chạy
+    if (au.source) {
+        try { au.source.stop(); } catch(e) {}
+    }
+    
+    au.source = au.ctx.createBufferSource();
+    au.source.buffer = au.buffer;
+    au.source.loop = true; // Lặp lại liên tục file nhạc thiền
+    
+    // Kết nối âm thanh vào hệ thống chung (giữ nguyên thanh chỉnh âm lượng `vol` của bạn)
+    au.source.connect(au.bus || au.master || au.ctx.destination);
+    au.source.start(0);
+}
 
   /* ---------- màn hình vào chùa ---------- */
   var pickG = 'm';
