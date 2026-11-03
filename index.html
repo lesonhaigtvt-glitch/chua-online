@@ -824,7 +824,7 @@ function playMeditationMusic() {
     me.t = Date.now(); me.entered = true; startedAt = performance.now();
     me.x = 400; me.y = 600; me.p = 'stand'; me.face = 1;
     $('entry').hidden = true;
-    pushFull(); playMeditationMusic(true);
+   pushFull(); loadAudioFile(); playMeditationMusic();
     addLog('', 'Bạn đã vào chánh điện. Chạm vào bồ đoàn để ngồi, chạm vào bàn hương để thắp hương.', true);
   });
   $('nick').addEventListener('input', function () { $('nameErr').textContent = ''; });
