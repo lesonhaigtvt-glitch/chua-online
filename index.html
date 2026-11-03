@@ -766,7 +766,7 @@ var au = { ctx: null, master: null, bus: null, on: false, vol: 0.5, source: null
 function loadAudioFile() {
     if (!au.ctx) return;
     
-    fetch('nhac-thien.mp3')
+    fetch('nhac-thien')
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => au.ctx.decodeAudioData(arrayBuffer))
         .then(audioBuffer => {
